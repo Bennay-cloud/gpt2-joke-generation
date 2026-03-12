@@ -1,0 +1,60 @@
+name: Build, Push & Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "app/**"
+      - "deploy/**"
+      - ".github/workflows/deploy.yml"
+
+env:
+  ACR_NAME: gpt2jokeacr2026musti
+  IMAGE: gpt2jokeacr2026musti.azurecr.io/gpt2-inference
+  RESOURCE_GROUP: gpt2-joke-rg
+  AKS_CLUSTER: gpt2-joke-aks
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Login to ACR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.ACR_NAME }}.azurecr.io
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./app
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:latest
+            ${{ env.IMAGE }}:${{ github.sha }}
+
+      - name: Set AKS context
+        uses: azure/aks-set-context@v4
+        with:
+          resource-group: ${{ env.RESOURCE_GROUP }}
+          cluster-name: ${{ env.AKS_CLUSTER }}
+
+      - name: Update deployment image
+        run: |
+          kubectl set image deployment/gpt2-joke \
+            gpt2-inference=${{ env.IMAGE }}:${{ github.sha }}
+          kubectl rollout status deployment/gpt2-joke

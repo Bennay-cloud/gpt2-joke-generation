@@ -1,0 +1,9 @@
+FROM python:3.10-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY model/ ./model/
+COPY tokenizer/ ./tokenizer/
+COPY score.py .
+EXPOSE 5001
+CMD ["gunicorn", "--bind", "0.0.0.0:5001", "--timeout", "120", "score:app"]

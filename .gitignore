@@ -1,0 +1,64 @@
+############################
+# Python
+############################
+
+.env
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.so
+
+.env
+.venv/
+venv/
+ENV/
+
+############################
+# Jupyter
+############################
+
+.ipynb_checkpoints
+
+############################
+# MacOS
+############################
+
+.DS_Store
+
+############################
+# Terraform
+############################
+
+.terraform/
+terraform.tfstate
+terraform.tfstate.*
+*.tfstate
+*.tfstate.backup
+
+############################
+# Docker
+############################
+
+*.tar
+*.log
+
+############################
+# Model files (very important)
+############################
+train/outputs/
+mlruns/
+app/model/
+app/tokenizer/
+
+############################
+# Streamlit cache
+############################
+
+.streamlit/
+
+############################
+# Kubernetes secrets
+############################
+
+kubeconfig
