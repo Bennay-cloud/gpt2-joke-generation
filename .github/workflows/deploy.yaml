@@ -8,6 +8,12 @@ on:
             - "app/**"
             - "deploy/**"
             - ".github/workflows/deploy.yaml"
+    workflow_dispatch:
+        inputs:
+            force_version:
+                description: "Force a specific version (e.g. v1). Leave empty to use latest.json."
+                required: false
+                default: ""
 
 env:
     ACR_NAME: gpt2jokeacr2026musti
@@ -29,25 +35,65 @@ jobs:
               with:
                   creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-            - name: Download model and tokenizer from Azure Blob
+            - name: Read latest.json from Blob
+              id: latest
+              run: |
+                  # Matches your actual blob path: models/latest.json
+                  az storage blob download \
+                    --account-name ${{ secrets.STORAGE_ACCOUNT_NAME }} \
+                    --account-key ${{ secrets.STORAGE_ACCOUNT_KEY }} \
+                    --container-name $BLOB_CONTAINER \
+                    --name "models/latest.json" \
+                    --file latest.json \
+                    --no-progress
+
+                  cat latest.json
+
+                  # Use forced version if provided, otherwise read latest_version key
+                  FORCE="${{ github.event.inputs.force_version }}"
+                  if [ -n "$FORCE" ]; then
+                    VERSION=$FORCE
+                  else
+                    VERSION=$(jq -r '.latest_version' latest.json)
+                  fi
+
+                  echo "Deploying version: $VERSION"
+                  echo "version=$VERSION"                         >> $GITHUB_OUTPUT
+                  echo "model_path=models/$VERSION/model"         >> $GITHUB_OUTPUT
+                  echo "tokenizer_path=models/$VERSION/tokenizer" >> $GITHUB_OUTPUT
+
+            - name: Download approved model and tokenizer from Blob
               run: |
                   mkdir -p app/model app/tokenizer
 
+                  MODEL_PATH="${{ steps.latest.outputs.model_path }}"
+                  TOKENIZER_PATH="${{ steps.latest.outputs.tokenizer_path }}"
+
+                  echo "Downloading model from: $MODEL_PATH"
                   az storage blob download-batch \
                     --account-name ${{ secrets.STORAGE_ACCOUNT_NAME }} \
                     --account-key ${{ secrets.STORAGE_ACCOUNT_KEY }} \
                     --source $BLOB_CONTAINER \
-                    --pattern "model/*" \
+                    --pattern "$MODEL_PATH/*" \
                     --destination app \
                     --no-progress
 
+                  echo "Downloading tokenizer from: $TOKENIZER_PATH"
                   az storage blob download-batch \
                     --account-name ${{ secrets.STORAGE_ACCOUNT_NAME }} \
                     --account-key ${{ secrets.STORAGE_ACCOUNT_KEY }} \
                     --source $BLOB_CONTAINER \
-                    --pattern "tokenizer/*" \
+                    --pattern "$TOKENIZER_PATH/*" \
                     --destination app \
                     --no-progress
+
+                  # Flatten: app/models/v1/model/* → app/model/
+                  VERSION="${{ steps.latest.outputs.version }}"
+                  if [ -d "app/models/$VERSION/model" ]; then
+                    cp -r app/models/$VERSION/model/* app/model/
+                    cp -r app/models/$VERSION/tokenizer/* app/tokenizer/
+                    rm -rf app/models
+                  fi
 
             - name: Verify model artifacts
               run: |
@@ -55,7 +101,8 @@ jobs:
                     || (echo "ERROR: app/model is empty or missing" && exit 1)
                   test -d app/tokenizer && test -n "$(ls -A app/tokenizer)" \
                     || (echo "ERROR: app/tokenizer is empty or missing" && exit 1)
-                  echo "Model files:"; ls app/model
+                  echo "Version: ${{ steps.latest.outputs.version }}"
+                  echo "Model files:";     ls app/model
                   echo "Tokenizer files:"; ls app/tokenizer
 
             - name: Login to ACR
@@ -76,6 +123,7 @@ jobs:
                   push: true
                   tags: |
                       ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }}
+                      ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ steps.latest.outputs.version }}
                       ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:latest
 
             - name: Get AKS credentials
@@ -90,3 +138,10 @@ jobs:
                   kubectl set image deployment/gpt2-joke \
                     gpt2-inference=$ACR_NAME.azurecr.io/$IMAGE_NAME:${{ github.sha }}
                   kubectl rollout status deployment/gpt2-joke
+
+            - name: Annotate deployment with version
+              run: |
+                  kubectl annotate deployment/gpt2-joke \
+                    model-version="${{ steps.latest.outputs.version }}" \
+                    deployed-at="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+                    --overwrite
