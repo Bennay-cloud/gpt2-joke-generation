@@ -38,7 +38,7 @@ jobs:
                     --account-key ${{ secrets.STORAGE_ACCOUNT_KEY }} \
                     --source $BLOB_CONTAINER \
                     --pattern "model/*" \
-                    --destination app/model \
+                    --destination app \
                     --no-progress
 
                   az storage blob download-batch \
@@ -46,7 +46,7 @@ jobs:
                     --account-key ${{ secrets.STORAGE_ACCOUNT_KEY }} \
                     --source $BLOB_CONTAINER \
                     --pattern "tokenizer/*" \
-                    --destination app/tokenizer \
+                    --destination app \
                     --no-progress
 
             - name: Verify model artifacts
