@@ -1,12 +1,8 @@
-Here is a clean README description including installation and running instructions.
-
-⸻
-
-GPT-2 Joke Generator – End-to-End MLOps Pipeline
+# GPT-2 Joke Generator – End-to-End MLOps Pipeline
 
 This project implements an end-to-end MLOps pipeline that fine-tunes a GPT-2 language model on a jokes dataset and deploys it as a scalable inference service.
 
-The system includes:
+# The system includes:
 	•	GPT-2 fine-tuning with HuggingFace Transformers
 	•	automated model evaluation with a quality threshold
 	•	model versioning using Azure Blob Storage
@@ -20,7 +16,7 @@ Users can generate jokes by submitting prompts through the web interface or API.
 
 ⸻
 
-Tech Stack
+# Tech Stack
 	•	Python
 	•	HuggingFace Transformers
 	•	PyTorch
@@ -34,7 +30,7 @@ Tech Stack
 
 ⸻
 
-Project Structure
+# Project Structure
 
 GPT2_AllTrans/
 │
@@ -61,7 +57,7 @@ GPT2_AllTrans/
 
 ⸻
 
-Installation
+# Installation
 
 1. Clone the repository
 
@@ -84,7 +80,7 @@ pip install -r app/requirements.txt
 
 ⸻
 
-Run the Inference API
+# Run the Inference API
 
 Start the Flask API:
 
@@ -107,7 +103,7 @@ curl -X POST http://localhost:5001/joke \
 
 ⸻
 
-Run the Streamlit Web UI
+# Run the Streamlit Web UI
 
 Start the interface:
 
@@ -121,7 +117,7 @@ Users can enter prompts and receive generated jokes from the GPT-2 model.
 
 ⸻
 
-Example Prompt
+# Example Prompt
 
 Why did the programmer quit his job?
 
@@ -135,9 +131,4 @@ Future Improvements
 	•	larger training datasets
 	•	GPU training support
 
-⸻
 
-If you’d like, I can also help you add these 3 things that make GitHub projects look much more professional:
-	•	architecture diagram in README
-	•	badges (Python, Docker, Azure, CI)
-	•	a demo GIF of the Streamlit app (very impressive for recruiters).
